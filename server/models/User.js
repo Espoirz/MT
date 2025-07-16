@@ -62,6 +62,42 @@ const userSchema = new mongoose.Schema({
     itemId: String,
     quantity: Number
   }],
+  lassos: {
+    rope: { type: Number, default: 1 },
+    cotton: { type: Number, default: 0 },
+    nylon: { type: Number, default: 0 },
+    leather: { type: Number, default: 0 },
+    wool: { type: Number, default: 0 },
+    gold: { type: Number, default: 0 }
+  },
+  leashes: {
+    nylon: { type: Number, default: 1 },
+    leather: { type: Number, default: 0 },
+    slip: { type: Number, default: 0 }
+  },
+  shelterReputation: {
+    type: Number,
+    default: 0
+  },
+  breederPoints: {
+    type: Number,
+    default: 0
+  },
+  membershipTier: {
+    type: String,
+    enum: ['basic', 'premium'],
+    default: 'basic'
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
+  },
+  sponsoredAnimals: [{
+    animalId: { type: mongoose.Schema.Types.ObjectId, refPath: 'sponsoredAnimals.animalType' },
+    animalType: { type: String, enum: ['Dog', 'Horse'] },
+    sponsorDate: { type: Date, default: Date.now }
+  }],
   settings: {
     notifications: {
       type: Boolean,

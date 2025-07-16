@@ -308,6 +308,11 @@ const Horses = () => {
           <FaPlus />
           Add Horse
         </AddButton>
+        
+        <AddButton onClick={() => window.location.href = '/horses/capture'}>
+          <FaHorse />
+          Capture Wild Horse
+        </AddButton>
       </Controls>
 
       {loading ? (

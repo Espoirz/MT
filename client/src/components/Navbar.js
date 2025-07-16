@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { FaHome, FaHorse, FaDog, FaTrophy, FaUser, FaSignOutAlt, FaHeart, FaComments, FaEnvelope } from 'react-icons/fa';
+import { FaHome, FaHorse, FaDog, FaTrophy, FaUser, FaSignOutAlt, FaHeart, FaComments, FaEnvelope, FaShieldAlt } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 
 const NavbarContainer = styled.nav`
@@ -131,6 +131,11 @@ const Navbar = () => {
               <NavLink to="/messages">
                 <FaEnvelope /> Messages
               </NavLink>
+              {user.role === 'admin' && (
+                <NavLink to="/admin">
+                  <FaShieldAlt /> Admin
+                </NavLink>
+              )}
             </>
           ) : (
             <>

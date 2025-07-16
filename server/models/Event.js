@@ -18,10 +18,7 @@ const eventSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: {
-      horse: ['Show Jumping', 'Dressage', 'Cross Country', 'Barrel Racing', 'Reining', 'Western Pleasure', 'Trail'],
-      dog: ['Agility', 'Obedience', 'Tracking', 'Herding', 'Dock Diving', 'Trick Training']
-    }
+    enum: ['Show Jumping', 'Dressage', 'Cross Country', 'Barrel Racing', 'Reining', 'Western Pleasure', 'Trail', 'Agility', 'Obedience', 'Tracking', 'Herding', 'Dock Diving', 'Trick Training']
   },
   difficulty: {
     type: String,

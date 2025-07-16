@@ -8,12 +8,16 @@ const {
   breedHorses,
   trainHorse,
   getBreeds,
+  getCaptureBiomes,
+  captureWildHorse,
 } = require('../controllers/horseController');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
 
 router.get('/breeds', getBreeds);
+router.get('/capture/biomes', auth, getCaptureBiomes);
+router.post('/capture', auth, captureWildHorse);
 router.use(auth); // All routes below require authentication
 
 router.route('/')

@@ -1,5 +1,7 @@
 const Horse = require('../models/Horse');
+const User = require('../models/User');
 const GeneticsCalculator = require('../utils/genetics');
+const { BIOMES, MATURITY_STAGES, generateWildHorse, isVolcanicRidgeActive } = require('../utils/wildHorseCapture');
 
 // @desc    Get all horses for a user
 // @route   GET /api/horses
@@ -294,18 +296,129 @@ const trainHorse = async (req, res) => {
   }
 };
 
-// @desc    Get horse breeds
+// @desc    Get capture biomes and information
+// @route   GET /api/horses/capture/biomes
+// @access  Private
+const getCaptureBiomes = async (req, res) => {
+  try {
+    const biomes = Object.keys(BIOMES).map(key => ({
+      id: key,
+      ...BIOMES[key],
+      isActive: key === 'volcanic_ridge' ? isVolcanicRidgeActive() : true
+    }));
+    
+    res.json({
+      success: true,
+      data: {
+        biomes,
+        maturityStages: MATURITY_STAGES
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Capture a wild horse
+// @route   POST /api/horses/capture
+// @access  Private
+const captureWildHorse = async (req, res) => {
+  try {
+    const { biome, maturityStage, paymentMethod } = req.body;
+    
+    // Validate input
+    if (!BIOMES[biome]) {
+      return res.status(400).json({ message: 'Invalid biome selected' });
+    }
+    
+    if (!MATURITY_STAGES[maturityStage]) {
+      return res.status(400).json({ message: 'Invalid maturity stage selected' });
+    }
+    
+    // Check if volcanic ridge is active
+    if (biome === 'volcanic_ridge' && !isVolcanicRidgeActive()) {
+      return res.status(400).json({ message: 'Volcanic Ridge is not currently active' });
+    }
+    
+    // Get user with lassos and currency
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    const biomeConfig = BIOMES[biome];
+    const costs = biomeConfig.costs;
+    
+    // Validate payment method and deduct costs
+    let paymentValid = false;
+    
+    if (paymentMethod === 'coins' && user.coins >= costs.coins) {
+      user.coins -= costs.coins;
+      paymentValid = true;
+    } else if (paymentMethod === 'gems' && biome === 'volcanic_ridge' && user.gems >= costs.gems) {
+      user.gems -= costs.gems;
+      paymentValid = true;
+    } else {
+      // Check for lasso payment
+      const lassoType = Object.keys(costs).find(key => key !== 'coins' && key !== 'gems');
+      if (lassoType && user.lassos && user.lassos[lassoType] >= costs[lassoType]) {
+        user.lassos[lassoType] -= costs[lassoType];
+        paymentValid = true;
+      }
+    }
+    
+    if (!paymentValid) {
+      return res.status(400).json({ message: 'Insufficient funds or items for capture' });
+    }
+    
+    // Generate wild horse
+    const wildHorseData = generateWildHorse(biome, maturityStage, req.user.id);
+    
+    // Create horse in database
+    const horse = await Horse.create(wildHorseData);
+    
+    // Add experience for capture
+    const oldLevel = user.level;
+    user.experience += 50;
+    if (biome === 'volcanic_ridge') user.experience += 100; // Bonus for rare biome
+    
+    // Level up check (simple formula)
+    const newLevel = Math.floor(user.experience / 1000) + 1;
+    if (newLevel > user.level) {
+      user.level = newLevel;
+    }
+    
+    // Save user with updated currency/items and experience
+    await user.save();
+    
+    res.status(201).json({
+      success: true,
+      message: `Successfully captured a wild ${biomeConfig.name} horse!`,
+      data: {
+        horse,
+        experienceGained: biome === 'volcanic_ridge' ? 150 : 50,
+        levelUp: newLevel > oldLevel,
+        newLevel: newLevel
+      }
+    });
+    
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get available breeds
 // @route   GET /api/horses/breeds
 // @access  Public
 const getBreeds = async (req, res) => {
   try {
-    const breeds = Object.keys(GeneticsCalculator.HORSE_BREED_STATS).map(breed => ({
-      name: breed,
-      stats: GeneticsCalculator.HORSE_BREED_STATS[breed],
-      category: breed.includes('Pony') ? 'pony' : 
-                (breed === 'Clydesdale' || breed === 'Belgian Draft') ? 'draft' : 'horse'
-    }));
-
+    const breeds = [
+      'Thoroughbred', 'Friesian', 'Arabian', 'Quarter Horse', 'Appaloosa',
+      'Mustang', 'Hanoverian', 'Paint Horse', 'Clydesdale', 'Belgian Draft',
+      'Lusitano', 'Akhal-Teke', 'Warmblood Mix', 'Morgan', 'Tennessee Walker',
+      'Welsh Pony', 'Shetland Pony', 'Connemara Pony', 'Fjord Pony', 'Hackney Pony'
+    ];
+    
     res.json({
       success: true,
       data: breeds,
@@ -324,4 +437,6 @@ module.exports = {
   breedHorses,
   trainHorse,
   getBreeds,
+  getCaptureBiomes,
+  captureWildHorse,
 };

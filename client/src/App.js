@@ -12,8 +12,12 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import Horses from './pages/Horses';
+import WildHorseCapture from './pages/WildHorseCapture';
 import Dogs from './pages/Dogs';
+import DogCapture from './pages/DogCapture';
+import DogShelter from './pages/DogShelter';
 import Events from './pages/Events';
 import Breeding from './pages/Breeding';
 import Forums from './pages/Forums';
@@ -50,15 +54,39 @@ function App() {
                 </ProtectedRoute>
               } />
               
+              <Route path="/admin" element={
+                <ProtectedRoute>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } />
+              
               <Route path="/horses" element={
                 <ProtectedRoute>
                   <Horses />
                 </ProtectedRoute>
               } />
               
+              <Route path="/horses/capture" element={
+                <ProtectedRoute>
+                  <WildHorseCapture />
+                </ProtectedRoute>
+              } />
+              
               <Route path="/dogs" element={
                 <ProtectedRoute>
                   <Dogs />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/dogs/capture" element={
+                <ProtectedRoute>
+                  <DogCapture />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/dogs/shelter" element={
+                <ProtectedRoute>
+                  <DogShelter />
                 </ProtectedRoute>
               } />
               

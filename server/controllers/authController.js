@@ -43,10 +43,12 @@ const register = async (req, res) => {
         id: user._id,
         username: user.username,
         email: user.email,
+        role: user.role,
         coins: user.coins,
         gems: user.gems,
         level: user.level,
-        experience: user.experience
+        experience: user.experience,
+        membershipTier: user.membershipTier
       },
     });
   } catch (error) {
@@ -85,10 +87,12 @@ const login = async (req, res) => {
         id: user._id,
         username: user.username,
         email: user.email,
+        role: user.role,
         coins: user.coins,
         gems: user.gems,
         level: user.level,
-        experience: user.experience
+        experience: user.experience,
+        membershipTier: user.membershipTier
       },
     });
   } catch (error) {
@@ -104,7 +108,7 @@ const getMe = async (req, res) => {
     const user = await User.findById(req.user.id).select('-password');
     res.json({
       success: true,
-      user,
+      data: user,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

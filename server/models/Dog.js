@@ -32,6 +32,69 @@ const dogSchema = new mongoose.Schema({
     max: 20,
     default: 0
   },
+  captureLocation: {
+    type: String,
+    enum: ['park', 'streets', 'farm', 'shelter', 'bred'],
+    default: 'bred'
+  },
+  isWild: {
+    type: Boolean,
+    default: false
+  },
+  captureDate: {
+    type: Date
+  },
+  tamingDifficulty: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: 50
+  },
+  bondingSpeed: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: 50
+  },
+  specialTitle: {
+    type: String,
+    default: ''
+  },
+  showDisciplineAffinity: {
+    type: [String],
+    default: []
+  },
+  // Shelter-related fields
+  shelterEntry: {
+    type: Date
+  },
+  quarantineUntil: {
+    type: Date
+  },
+  isInShelter: {
+    type: Boolean,
+    default: false
+  },
+  shelterReason: {
+    type: String,
+    enum: ['abandoned', 'rescued', 'surrendered', 'returned'],
+    default: 'abandoned'
+  },
+  adopter: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  adoptionFee: {
+    type: Number,
+    default: 0
+  },
+  sponsoredBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  lastChanceDate: {
+    type: Date
+  },
   height: {
     type: Number, // in inches
     min: 8,
@@ -65,7 +128,21 @@ const dogSchema = new mongoose.Schema({
     dm: { type: String, enum: ['N/N', 'N/dm', 'dm/dm'] },
     mdr1: { type: String, enum: ['N/N', 'N/mdr1', 'mdr1/mdr1'] },
     cea: { type: String, enum: ['N/N', 'N/cea', 'cea/cea'] },
-    huu: { type: String, enum: ['N/N', 'N/huu', 'huu/huu'] }
+    huu: { type: String, enum: ['N/N', 'N/huu', 'huu/huu'] },
+    hip_dysplasia: { type: String, enum: ['N/N', 'N/hd', 'hd/hd'] },
+    elbow_dysplasia: { type: String, enum: ['N/N', 'N/ed', 'ed/ed'] },
+    heart_condition: { type: String, enum: ['N/N', 'N/hc', 'hc/hc'] },
+    epilepsy: { type: String, enum: ['N/N', 'N/ep', 'ep/ep'] }
+  },
+  hiddenDisorders: {
+    type: [String],
+    default: []
+  },
+  coi: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: 0
   },
   stats: {
     intelligence: { type: Number, min: 0, max: 100, default: 50 },

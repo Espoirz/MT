@@ -322,6 +322,16 @@ const Dogs = () => {
           Filters
         </FilterButton>
         
+        <AddButton onClick={() => window.location.href = '/dogs/capture'}>
+          <FaPlus />
+          Capture Wild Dog
+        </AddButton>
+        
+        <AddButton onClick={() => window.location.href = '/dogs/shelter'}>
+          <FaHeart />
+          Shelter
+        </AddButton>
+        
         <AddButton onClick={() => window.location.href = '/dogs/add'}>
           <FaPlus />
           Add Dog

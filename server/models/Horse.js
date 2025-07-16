@@ -33,6 +33,23 @@ const horseSchema = new mongoose.Schema({
     max: 30,
     default: 0
   },
+  maturityStage: {
+    type: String,
+    enum: ['foal', 'yearling', 'adult'],
+    default: 'adult'
+  },
+  biome: {
+    type: String,
+    enum: ['plains', 'beach', 'hilltops', 'desert', 'snowfield', 'volcanic_ridge'],
+    default: 'plains'
+  },
+  isWild: {
+    type: Boolean,
+    default: false
+  },
+  captureDate: {
+    type: Date
+  },
   height: {
     type: Number, // in hands (hh)
     min: 9,
@@ -41,7 +58,8 @@ const horseSchema = new mongoose.Schema({
   color: {
     base: String,
     pattern: String,
-    markings: [String]
+    markings: [String],
+    overlays: [String]
   },
   genetics: {
     // Coat color genes
@@ -55,6 +73,10 @@ const horseSchema = new mongoose.Schema({
     tobiano: { type: String, enum: ['TO/TO', 'TO/to', 'to/to'] },
     sabino: { type: String, enum: ['SB1/SB1', 'SB1/sb1', 'sb1/sb1'] },
     splashed_white: { type: String, enum: ['SW/SW', 'SW/sw', 'sw/sw'] },
+    overo: { type: String, enum: ['O/O', 'O/o', 'o/o'] },
+    pearl: { type: String, enum: ['prl/prl', 'prl/+', '+/+'] },
+    brindle: { type: String, enum: ['Br/Br', 'Br/br', 'br/br'] },
+    chimera: { type: String, enum: ['Chi/Chi', 'Chi/chi', 'chi/chi'] },
     
     // Health genes
     hyperkalemic_paralysis: { type: String, enum: ['N/N', 'N/H', 'H/H'] },
@@ -69,7 +91,25 @@ const horseSchema = new mongoose.Schema({
     intelligence: { type: Number, min: 0, max: 100, default: 50 },
     obedience: { type: Number, min: 0, max: 100, default: 50 },
     temperament: { type: Number, min: 0, max: 100, default: 50 },
-    reflexes: { type: Number, min: 0, max: 100, default: 50 }
+    reflexes: { type: Number, min: 0, max: 100, default: 50 },
+    stamina: { type: Number, min: 0, max: 100, default: 50 },
+    flexibility: { type: Number, min: 0, max: 100, default: 50 }
+  },
+  temperamentQuality: {
+    type: String,
+    enum: ['calm', 'balanced', 'spirited', 'difficult', 'stubborn'],
+    default: 'balanced'
+  },
+  bondingPotential: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: 50
+  },
+  trainingPotential: {
+    type: String,
+    enum: ['limited', 'moderate', 'full'],
+    default: 'full'
   },
   training: {
     dressage: { type: Number, min: 0, max: 100, default: 0 },

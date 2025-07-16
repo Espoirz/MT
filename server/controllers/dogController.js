@@ -1,5 +1,14 @@
 const Dog = require('../models/Dog');
+const User = require('../models/User');
 const GeneticsCalculator = require('../utils/genetics');
+const { 
+  CAPTURE_LOCATIONS, 
+  generateWildDog, 
+  calculateAdoptionFee, 
+  calculateShelterReputationGain, 
+  canAccessPremiumLocation, 
+  canSponsorMore 
+} = require('../utils/dogCapture');
 
 // @desc    Get all dogs for a user
 // @route   GET /api/dogs
@@ -322,6 +331,275 @@ const getBreeds = async (req, res) => {
   }
 };
 
+// @desc    Get capture locations
+// @route   GET /api/dogs/capture-locations
+// @access  Private
+const getCaptureLocations = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    
+    const locations = Object.keys(CAPTURE_LOCATIONS).map(key => {
+      const location = CAPTURE_LOCATIONS[key];
+      return {
+        id: key,
+        name: location.name,
+        description: location.description,
+        costs: location.costs,
+        premiumOnly: location.premiumOnly,
+        breedPreferences: location.breedPreferences,
+        specialEffects: location.specialEffects,
+        accessible: !location.premiumOnly || canAccessPremiumLocation(user)
+      };
+    });
+
+    res.json({
+      success: true,
+      data: locations,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Capture a wild dog
+// @route   POST /api/dogs/capture
+// @access  Private
+const captureWildDog = async (req, res) => {
+  try {
+    const { location, paymentMethod, paymentAmount } = req.body;
+    
+    if (!location || !CAPTURE_LOCATIONS[location]) {
+      return res.status(400).json({ message: 'Invalid capture location' });
+    }
+    
+    const user = await User.findById(req.user.id);
+    const locationConfig = CAPTURE_LOCATIONS[location];
+    
+    // Check premium access
+    if (locationConfig.premiumOnly && !canAccessPremiumLocation(user)) {
+      return res.status(403).json({ message: 'Premium membership required for this location' });
+    }
+    
+    // Validate payment
+    const costs = locationConfig.costs;
+    const hasNylon = costs.nylon && user.leashes.nylon >= costs.nylon;
+    const hasLeather = costs.leather && user.leashes.leather >= costs.leather;
+    const hasSlip = costs.slip && user.leashes.slip >= costs.slip;
+    const hasCoins = user.coins >= costs.coins;
+    
+    if (!hasCoins) {
+      return res.status(400).json({ message: 'Insufficient coins' });
+    }
+    
+    let canCapture = false;
+    let leashType = '';
+    
+    if (costs.nylon && hasNylon) {
+      canCapture = true;
+      leashType = 'nylon';
+    } else if (costs.leather && hasLeather) {
+      canCapture = true;
+      leashType = 'leather';
+    } else if (costs.slip && hasSlip) {
+      canCapture = true;
+      leashType = 'slip';
+    }
+    
+    if (!canCapture) {
+      return res.status(400).json({ message: 'Insufficient leashes for this location' });
+    }
+    
+    // Deduct payment
+    user.coins -= costs.coins;
+    user.leashes[leashType] -= costs[leashType];
+    
+    // Generate wild dog
+    const wildDog = generateWildDog(location, req.user.id);
+    
+    // Create dog in database
+    const dog = new Dog(wildDog);
+    await dog.save();
+    
+    await user.save();
+    
+    res.json({
+      success: true,
+      message: `Successfully captured a wild dog from ${locationConfig.name}!`,
+      data: {
+        dog: dog,
+        paymentUsed: {
+          coins: costs.coins,
+          [leashType]: costs[leashType]
+        },
+        remainingResources: {
+          coins: user.coins,
+          leashes: user.leashes
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get shelter dogs
+// @route   GET /api/dogs/shelter
+// @access  Private
+const getShelterDogs = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    
+    const dogs = await Dog.find({ 
+      shelterEntry: { $exists: true },
+      owner: null,
+      quarantineUntil: { $lt: new Date() }
+    })
+      .sort({ shelterEntry: 1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+    
+    const totalDogs = await Dog.countDocuments({ 
+      shelterEntry: { $exists: true },
+      owner: null,
+      quarantineUntil: { $lt: new Date() }
+    });
+    
+    const dogsWithAdoptionFees = dogs.map(dog => ({
+      ...dog.toObject(),
+      adoptionFee: calculateAdoptionFee(dog)
+    }));
+    
+    res.json({
+      success: true,
+      data: dogsWithAdoptionFees,
+      pagination: {
+        current: page,
+        total: Math.ceil(totalDogs / limit),
+        totalDogs: totalDogs
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Adopt a dog from shelter
+// @route   POST /api/dogs/adopt/:id
+// @access  Private
+const adoptDog = async (req, res) => {
+  try {
+    const dog = await Dog.findById(req.params.id);
+    
+    if (!dog) {
+      return res.status(404).json({ message: 'Dog not found' });
+    }
+    
+    if (dog.owner) {
+      return res.status(400).json({ message: 'Dog already adopted' });
+    }
+    
+    if (!dog.shelterEntry) {
+      return res.status(400).json({ message: 'Dog not in shelter' });
+    }
+    
+    if (dog.quarantineUntil && dog.quarantineUntil > new Date()) {
+      return res.status(400).json({ message: 'Dog still in quarantine' });
+    }
+    
+    const user = await User.findById(req.user.id);
+    const adoptionFee = calculateAdoptionFee(dog);
+    
+    if (user.coins < adoptionFee) {
+      return res.status(400).json({ message: 'Insufficient coins for adoption fee' });
+    }
+    
+    // Process adoption
+    user.coins -= adoptionFee;
+    user.shelterReputation += calculateShelterReputationGain('adopt', dog);
+    
+    dog.owner = req.user.id;
+    dog.shelterEntry = undefined;
+    dog.quarantineUntil = undefined;
+    dog.adoptionDate = new Date();
+    dog.name = `Adopted ${dog.breed}`;
+    
+    await user.save();
+    await dog.save();
+    
+    res.json({
+      success: true,
+      message: 'Dog adopted successfully!',
+      data: {
+        dog: dog,
+        adoptionFee: adoptionFee,
+        reputationGain: calculateShelterReputationGain('adopt', dog),
+        remainingCoins: user.coins,
+        newReputation: user.shelterReputation
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Sponsor a dog in shelter
+// @route   POST /api/dogs/sponsor/:id
+// @access  Private
+const sponsorDog = async (req, res) => {
+  try {
+    const dog = await Dog.findById(req.params.id);
+    
+    if (!dog) {
+      return res.status(404).json({ message: 'Dog not found' });
+    }
+    
+    if (dog.owner) {
+      return res.status(400).json({ message: 'Dog already adopted' });
+    }
+    
+    if (!dog.shelterEntry) {
+      return res.status(400).json({ message: 'Dog not in shelter' });
+    }
+    
+    const user = await User.findById(req.user.id);
+    
+    if (!canSponsorMore(user)) {
+      return res.status(400).json({ message: 'Maximum sponsorship limit reached or premium membership required' });
+    }
+    
+    const sponsorshipCost = 500;
+    
+    if (user.coins < sponsorshipCost) {
+      return res.status(400).json({ message: 'Insufficient coins for sponsorship' });
+    }
+    
+    // Process sponsorship
+    user.coins -= sponsorshipCost;
+    user.shelterReputation += calculateShelterReputationGain('sponsor', dog);
+    user.sponsoredAnimals.push({
+      animal: dog._id,
+      type: 'dog',
+      sponsorshipDate: new Date()
+    });
+    
+    await user.save();
+    
+    res.json({
+      success: true,
+      message: 'Dog sponsored successfully!',
+      data: {
+        dog: dog,
+        sponsorshipCost: sponsorshipCost,
+        reputationGain: calculateShelterReputationGain('sponsor', dog),
+        remainingCoins: user.coins,
+        newReputation: user.shelterReputation
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getDogs,
   getDog,
@@ -331,4 +609,9 @@ module.exports = {
   breedDogs,
   trainDog,
   getBreeds,
+  getCaptureLocations,
+  captureWildDog,
+  getShelterDogs,
+  adoptDog,
+  sponsorDog,
 };

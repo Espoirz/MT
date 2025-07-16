@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config();
+require('dotenv').config({ path: __dirname + '/.env' });
 
 const connectDB = require('../database/connection');
 
@@ -12,6 +12,7 @@ const dogRoutes = require('./routes/dogs');
 const eventRoutes = require('./routes/events');
 const forumRoutes = require('./routes/forums');
 const messageRoutes = require('./routes/messages');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use('/api/dogs', dogRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/forums', forumRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
