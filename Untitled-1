@@ -1,0 +1,18 @@
+MT/
+├── README.md
+├── client/           # React frontend
+│   ├── public/
+│   └── src/
+│       ├── components/
+│       ├── pages/
+│       ├── assets/
+│       └── App.js
+├── server/           # Node.js backend
+│   ├── models/       # Horse, Dog, User, Event, Genetics
+│   ├── routes/
+│   ├── controllers/
+│   ├── utils/
+│   └── server.js
+├── package.json
+├── .env
+└── database/         # MongoDB setup/scripts
